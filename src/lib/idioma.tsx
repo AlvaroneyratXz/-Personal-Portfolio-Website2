@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { createContext, useContext, useEffect, useState, type Context, type ReactNode } from "react";
 import { contenido, type Idioma, type Textos } from "./contenido";
 

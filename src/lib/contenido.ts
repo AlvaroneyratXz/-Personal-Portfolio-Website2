@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 export type Idioma = "en" | "es";
 
 export interface Textos {
@@ -146,6 +147,10 @@ export const contenido: Record<Idioma, Textos> = {
       },
     ],
     habilidades: [
+      {
+        titulo: "Web Development",
+        items: ["Node.js", "Express.js", "SQLite", "React", "TypeScript", "Tailwind CSS"],
+      },
       {
         titulo: "Support & Operations",
         items: ["N1/N2 incidents", "ITIL", "SLA", "Knowledge base", "Equipment/license inventory", "Backup & restore"],
@@ -300,6 +305,10 @@ export const contenido: Record<Idioma, Textos> = {
       },
     ],
     habilidades: [
+      {
+        titulo: "Desarrollo Web",
+        items: ["Node.js", "Express.js", "SQLite", "React", "TypeScript", "Tailwind CSS"],
+      },
       {
         titulo: "Soporte y Operaciones",
         items: [
