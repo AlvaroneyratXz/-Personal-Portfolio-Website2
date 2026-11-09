@@ -52,6 +52,7 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { name: "google-site-verification", content: "NrP2OcGYDqEq7" },
       { title: "Alvaro Jose Neyra Sáenz | Web Developer & Cybersecurity Specialist" },
       {
         name: "description",
