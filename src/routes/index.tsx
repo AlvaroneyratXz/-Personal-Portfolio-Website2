@@ -31,6 +31,22 @@ import { TerminalInteractiva } from "../components/TerminalInteractiva";
 import { FotoPerfil } from "../components/FotoPerfil";
 import { SeisOjos } from "../components/SeisOjos";
 import { EfectosCursor } from "../components/EfectosCursor";
+import {
+  cargarEducacion,
+  cargarExperiencia,
+  EDUCACION_BASE,
+  EXPERIENCIA_BASE,
+  type EducacionItem,
+  type ExperienciaItem,
+} from "../lib/experiencia-almacen";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import {
+  cargarHero,
+  enlaceTelefono,
+  HERO_BASE,
+  linkedinVisible,
+  type HeroDatos,
+} from "../lib/hero-almacen";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -54,22 +70,6 @@ export const Route = createFileRoute("/")({
 });
 
 const CORREO = "neyra11423@hotmail.com";
-import {
-  cargarEducacion,
-  cargarExperiencia,
-  EDUCACION_BASE,
-  EXPERIENCIA_BASE,
-  type EducacionItem,
-  type ExperienciaItem,
-} from "../lib/experiencia-almacen";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
-import {
-  cargarHero,
-  enlaceTelefono,
-  HERO_BASE,
-  linkedinVisible,
-  type HeroDatos,
-} from "../lib/hero-almacen";
 
 function Index() {
   return (
