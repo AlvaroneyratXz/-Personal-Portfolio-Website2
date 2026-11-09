@@ -52,16 +52,16 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Alvaro Jose Neyra Sáenz | Soporte TI y Ciberseguridad" },
+      { title: "Alvaro Jose Neyra Sáenz | Web Developer & Cybersecurity Specialist" },
       {
         name: "description",
         content:
-          "Portafolio profesional de Alvaro Jose Neyra Sáenz, especialista en soporte TI, operaciones y ciberseguridad.",
+          "Web Developer & Cybersecurity Specialist. Portfolio of Alvaro Jose Neyra Sáenz.",
       },
-      { property: "og:title", content: "Alvaro Jose Neyra Sáenz | Soporte TI y Ciberseguridad" },
+      { property: "og:title", content: "Alvaro Jose Neyra Sáenz | Web Developer & Cybersecurity Specialist" },
       {
         property: "og:description",
-        content: "Experiencia, habilidades y proyectos de soporte TI y ciberseguridad.",
+        content: "Web Developer & Cybersecurity Specialist. Portfolio and projects.",
       },
       { property: "og:image", content: "https://alvaroneyra.vercel.app/portada2.jpeg" },
       { property: "og:type", content: "website" },
