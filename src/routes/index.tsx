@@ -558,20 +558,32 @@ function Contacto() {
   const [mensaje, setMensaje] = useState("");
   const [errores, setErrores] = useState<{ nombre?: string; correo?: string; mensaje?: string }>({});
   const [enviado, setEnviado] = useState(false);
+  const [bloqueado, setBloqueado] = useState(false);
 
   const validar = (e: React.FormEvent) => {
     e.preventDefault();
+    if (bloqueado) return;
+
     const nuevos: { nombre?: string; correo?: string; mensaje?: string } = {};
-    if (nombre.trim().length < 2) nuevos.nombre = t.form.errNombre;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) nuevos.correo = t.form.errCorreo;
-    if (mensaje.trim().length < 10) nuevos.mensaje = t.form.errMensaje;
+    const nombreLimpio = nombre.trim().replace(/<[^>]*>?/gm, "");
+    const correoLimpio = correo.trim();
+    const mensajeLimpio = mensaje.trim().replace(/<[^>]*>?/gm, "");
+
+    if (nombreLimpio.length < 2) nuevos.nombre = t.form.errNombre;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoLimpio)) nuevos.correo = t.form.errCorreo;
+    if (mensajeLimpio.length < 10) nuevos.mensaje = t.form.errMensaje;
+    
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0) {
       setEnviado(false);
       return;
     }
-    const asunto = encodeURIComponent(`Portfolio - ${nombre.trim()}`);
-    const cuerpo = encodeURIComponent(`${mensaje.trim()}\n\n${nombre.trim()} <${correo.trim()}>`);
+
+    setBloqueado(true);
+    setTimeout(() => setBloqueado(false), 5000);
+
+    const asunto = encodeURIComponent(`Portfolio - ${nombreLimpio}`);
+    const cuerpo = encodeURIComponent(`${mensajeLimpio}\n\n${nombreLimpio} <${correoLimpio}>`);
     window.location.href = `mailto:${CORREO}?subject=${asunto}&body=${cuerpo}`;
     setEnviado(true);
   };
@@ -617,10 +629,13 @@ function Contacto() {
           </div>
           <button
             type="submit"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-sharingan px-5 py-2.5 font-semibold text-foreground transition hover:brightness-125 sm:w-auto"
+            disabled={bloqueado}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-5 py-2.5 font-semibold text-foreground transition sm:w-auto ${
+              bloqueado ? "bg-muted cursor-not-allowed opacity-50" : "bg-sharingan hover:brightness-125"
+            }`}
           >
             <Send className="h-4 w-4" />
-            {t.form.enviar}
+            {bloqueado ? "Espera un momento..." : t.form.enviar}
           </button>
           {enviado && <p className="text-sm text-ojos">{t.form.exito}</p>}
         </form>

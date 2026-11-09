@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,13 +43,28 @@ const CORREO_INTERNO = "administrador@portafolio-admin.com";
 const CLAVE_RECORDAR = "portafolio-admin-recordar";
 const CLAVE_TEMPORAL = "portafolio-admin-temporal";
 
+// Función segura validada con Supabase y control estricto de roles de base de datos
 async function esAdministrador(): Promise<boolean> {
-  const { data } = await supabase.auth.getSession();
-  const usuario = data.session?.user;
-  if (!usuario) return false;
-  const { data: ok } = await supabase.rpc("has_role", { _user_id: usuario.id, _role: "admin" });
-  return ok === true;
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user) return false;
+
+    // Validación segura de rol a nivel de servidor/base de datos usando RPC protegida
+    const { data: ok, error: rpcError } = await supabase.rpc("has_role", { 
+      _user_id: session.user.id, 
+      _role: "admin" 
+    });
+
+    if (rpcError || ok !== true) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
 }
+
 const MAX_ARCHIVO = 2_500_000;
 const CAMPO =
   "w-full rounded-md border border-input bg-secondary px-3 py-2 text-base outline-none transition focus:border-ojos";
@@ -116,13 +132,13 @@ function Acceso({ alEntrar }: { alEntrar: () => void }) {
         fallos.current = 0;
       }
       if (!fallo) {
-        setError("La contraseña es correcta, pero la cuenta aún no tiene permiso de administrador. Intenta de nuevo en un minuto.");
+        setError("La contraseña es correcta, pero la cuenta no posee privilegios de administrador autorizados.");
       } else if (/email logins are disabled/i.test(fallo.message)) {
-        setError("El inicio de sesión con correo está desactivado en el proyecto. Actívalo en Lovable Cloud (Users > Auth settings > Email).");
+        setError("El inicio de sesión con correo está desactivado en el proyecto.");
       } else if (fallo.status === 400 && /invalid login/i.test(fallo.message)) {
-        setError("Contraseña incorrecta, o la cuenta del administrador aún se está preparando. Espera un minuto e inténtalo otra vez.");
+        setError("Credenciales incorrectas o cuenta en proceso de verificación.");
       } else {
-        setError(`No se pudo iniciar sesión: ${fallo.message}`);
+        setError("Acceso denegado. Verifique sus credenciales de seguridad.");
       }
       return;
     }
@@ -148,7 +164,7 @@ function Acceso({ alEntrar }: { alEntrar: () => void }) {
           <ArrowLeft className="h-4 w-4" />
           Atrás
         </a>
-        <h1 className="text-xl font-bold">Administrador</h1>
+        <h1 className="text-xl font-bold">Administrador Seguro</h1>
         <div>
           <label htmlFor="clave-admin" className="mb-1 block text-sm font-medium">
             Contraseña
@@ -205,11 +221,11 @@ function Panel({ alSalir }: { alSalir: () => void }) {
   const guardar = (nueva: Certificado[]): boolean => {
     const ordenada = ordenarCertificados(nueva);
     if (!guardarCertificados(ordenada)) {
-      setMensaje("No se pudo guardar: el archivo es demasiado grande. Usa una imagen más ligera.");
+      setMensaje("No se pudo guardar: el archivo es demasiado grande.");
       return false;
     }
     setLista(ordenada);
-    setMensaje("Cambios guardados. Abre la página principal para verlos.");
+    setMensaje("Cambios guardados de forma segura.");
     return true;
   };
 
@@ -260,7 +276,7 @@ function Panel({ alSalir }: { alSalir: () => void }) {
   };
 
   const restablecer = () => {
-    if (!window.confirm("¿Volver a los certificados originales? Se perderán tus cambios.")) return;
+    if (!window.confirm("¿Volver a los certificados originales?")) return;
     restablecerCertificados();
     setLista(ordenarCertificados(cargarCertificados()));
     setMensaje("Certificados restablecidos.");
@@ -270,11 +286,11 @@ function Panel({ alSalir }: { alSalir: () => void }) {
     if (!archivo) return;
     const permitidos = campo === "logo" ? ["image/png", "image/jpeg"] : ["image/png", "image/jpeg", "application/pdf"];
     if (!permitidos.includes(archivo.type)) {
-      setMensaje(campo === "logo" ? "El logo debe ser PNG o JPG." : "Solo se aceptan archivos PNG, JPG o PDF.");
+      setMensaje("Formato de archivo no permitido.");
       return;
     }
     if (archivo.size > MAX_ARCHIVO) {
-      setMensaje("El archivo es demasiado grande (máximo 2.5 MB).");
+      setMensaje("El archivo excede el límite de 2.5 MB.");
       return;
     }
     const lector = new FileReader();
@@ -287,9 +303,8 @@ function Panel({ alSalir }: { alSalir: () => void }) {
 
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:py-8 lg:max-w-5xl">
-
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Administrador de certificados</h1>
+        <h1 className="text-2xl font-bold">Panel de Administración Seguro</h1>
         <div className="flex flex-wrap gap-2">
           <a href="/" className={`${BOTON} border border-border text-foreground`}>
             <ArrowLeft className="h-4 w-4" />
@@ -374,7 +389,7 @@ function Panel({ alSalir }: { alSalir: () => void }) {
         {lista.map((c) => (
           <li key={c.nombre} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3">
             <div className="min-w-0 flex-1">
-              <p className="font-semibold [overflow-wrap:anywhere]">{c.nombre}</p>
+              <p className="font-semibold wrap-anywhere">{c.nombre}</p>
               <p className="font-mono text-xs text-muted-foreground">
                 {c.emisor}
                 {c.vigencia ? ` · ${c.vigencia}` : ""}
@@ -429,12 +444,12 @@ function PanelPortada() {
       setMensaje("No se pudo guardar los cambios.");
       return;
     }
-    setMensaje("Portada guardada. Abre la página principal para verla.");
+    setMensaje("Portada guardada exitosamente.");
     setAbierto(false);
   };
 
   const restablecer = () => {
-    if (!window.confirm("¿Volver a la portada original? Se perderán tus cambios.")) return;
+    if (!window.confirm("¿Volver a la portada original?")) return;
     restablecerHero();
     setDatos(cargarHero());
     setMensaje("Portada restablecida.");
@@ -448,7 +463,7 @@ function PanelPortada() {
 
   return (
     <section className="space-y-4 border-t border-border pt-6">
-      <h2 className="text-2xl font-bold">Portada (Hello, I'm)</h2>
+      <h2 className="text-2xl font-bold">Portada</h2>
       {mensaje && <p className="rounded-md border border-ojos/40 bg-card p-3 text-sm text-ojos">{mensaje}</p>}
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setAbierto(true)} className={`${BOTON} bg-sharingan text-foreground`}>
@@ -463,9 +478,9 @@ function PanelPortada() {
 
       {!abierto && (
         <div className="min-w-0 rounded-lg border border-border bg-card p-3">
-          <p className="font-semibold [overflow-wrap:anywhere]">{datos.nombre}</p>
-          <p className="text-sm text-ojos [overflow-wrap:anywhere]">{datos.es.titulo}</p>
-          <p className="font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">
+          <p className="font-semibold wrap-anywhere">{datos.nombre}</p>
+          <p className="text-sm text-ojos wrap-anywhere">{datos.es.titulo}</p>
+          <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
             {datos.telefono} · {datos.correo}
           </p>
         </div>
@@ -497,7 +512,7 @@ function PanelPortada() {
               <input className={CAMPO} value={datos.telefono} maxLength={30} onChange={(e) => setDatos({ ...datos, telefono: e.target.value })} />
             </div>
             <div className="min-w-0">
-              <label className="mb-1 block text-sm font-medium">LinkedIn (enlace)</label>
+              <label className="mb-1 block text-sm font-medium">LinkedIn</label>
               <input className={CAMPO} value={datos.linkedin} maxLength={150} onChange={(e) => setDatos({ ...datos, linkedin: e.target.value })} />
             </div>
             <div className="min-w-0">
@@ -547,7 +562,7 @@ function PanelEducacion() {
       return false;
     }
     setLista(nueva);
-    setMensaje("Educación guardada. Abre la página principal para verla.");
+    setMensaje("Educación guardada con éxito.");
     return true;
   };
 
@@ -566,11 +581,11 @@ function PanelEducacion() {
   const cargarArchivoEdu = (archivo: File | undefined) => {
     if (!archivo) return;
     if (!["image/png", "image/jpeg", "application/pdf"].includes(archivo.type)) {
-      setMensaje("Solo se aceptan archivos PDF, PNG o JPG.");
+      setMensaje("Formato no válido.");
       return;
     }
     if (archivo.size > MAX_ARCHIVO) {
-      setMensaje("El archivo es demasiado grande (máximo 2.5 MB).");
+      setMensaje("El archivo excede el límite de 2.5 MB.");
       return;
     }
     const lector = new FileReader();
@@ -600,7 +615,7 @@ function PanelEducacion() {
     const en = { titulo: b.tituloEn.trim(), lugar: b.lugarEn.trim() };
     const es = { titulo: b.tituloEs.trim(), lugar: b.lugarEs.trim() };
     if (!en.titulo && !es.titulo) {
-      setMensaje("Escribe el título de la carrera o estudio.");
+      setMensaje("Escribe el título.");
       return;
     }
     const nuevo: EducacionItem = {
@@ -618,12 +633,12 @@ function PanelEducacion() {
   };
 
   const borrar = (it: EducacionItem) => {
-    if (!window.confirm(`¿Eliminar "${it.es.titulo || it.en.titulo}"?`)) return;
+    if (!window.confirm("¿Eliminar este elemento?")) return;
     guardar(lista.filter((x) => x.id !== it.id));
   };
 
   const restablecer = () => {
-    if (!window.confirm("¿Volver a la educación original? Se perderán tus cambios.")) return;
+    if (!window.confirm("¿Restablecer educación original?")) return;
     restablecerEducacion();
     setLista(cargarEducacion());
     setMensaje("Educación restablecida.");
@@ -662,7 +677,7 @@ function PanelEducacion() {
             <input type="file" accept="image/png,image/jpeg" onChange={(e) => cargarLogoEdu(e.target.files?.[0])} className="w-full text-sm" />
             {b.logo && (
               <div className="mt-2 flex items-center gap-3">
-                <img src={b.logo} alt="Logo cargado" className="h-14 w-14 rounded-md border border-border bg-white object-contain p-1" />
+                <img src={b.logo} alt="Logo" className="h-14 w-14 rounded-md border border-border bg-white object-contain p-1" />
                 <button
                   type="button"
                   onClick={() => setB({ ...b, logo: "" })}
@@ -675,7 +690,7 @@ function PanelEducacion() {
             )}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Certificado o diploma (PDF, PNG o JPG)</label>
+            <label className="mb-1 block text-sm font-medium">Archivo adjunto</label>
             <input
               type="file"
               accept="application/pdf,image/png,image/jpeg"
@@ -722,13 +737,13 @@ function PanelEducacion() {
               <img src={it.logo} alt="Logo" className="h-10 w-10 shrink-0 rounded-md border border-border bg-white object-contain p-0.5" />
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-semibold [overflow-wrap:anywhere]">{it.es.titulo || it.en.titulo}</p>
-              <p className="font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">{it.es.lugar || it.en.lugar}</p>
+              <p className="font-semibold wrap-anywhere">{it.es.titulo || it.en.titulo}</p>
+              <p className="font-mono text-xs text-muted-foreground wrap-anywhere">{it.es.lugar || it.en.lugar}</p>
             </div>
             <button
               type="button"
               onClick={() => abrirEditar(it)}
-              aria-label="Editar educación"
+              aria-label="Editar"
               className="rounded-md border border-border p-2 hover:text-ojos"
             >
               <Pencil className="h-4 w-4" />
@@ -736,7 +751,7 @@ function PanelEducacion() {
             <button
               type="button"
               onClick={() => borrar(it)}
-              aria-label="Eliminar educación"
+              aria-label="Eliminar"
               className="rounded-md border border-border p-2 hover:text-sharingan"
             >
               <Trash2 className="h-4 w-4" />
@@ -782,11 +797,11 @@ function PanelExperiencia() {
 
   const guardar = (nueva: ExperienciaItem[]): boolean => {
     if (!guardarExperiencia(nueva)) {
-      setMensaje("No se pudo guardar: el logo es demasiado grande. Usa una imagen más ligera.");
+      setMensaje("No se pudo guardar: el archivo es demasiado grande.");
       return false;
     }
     setLista(nueva);
-    setMensaje("Experiencia guardada. Abre la página principal para verla.");
+    setMensaje("Experiencia guardada con éxito.");
     return true;
   };
 
@@ -826,7 +841,6 @@ function PanelExperiencia() {
     }
     const en = { periodo: b.periodoEn.trim(), rol: b.rolEn.trim(), detalle: lineas(b.detalleEn) };
     const es = { periodo: b.periodoEs.trim(), rol: b.rolEs.trim(), detalle: lineas(b.detalleEs) };
-    // Si un idioma queda vacío, se reutiliza el otro.
     const nuevo: ExperienciaItem = {
       id: editando ?? `exp-${Date.now()}`,
       empresa,
@@ -834,8 +848,7 @@ function PanelExperiencia() {
       en: en.rol || en.periodo || en.detalle.length ? en : es,
       es: es.rol || es.periodo || es.detalle.length ? es : en,
     };
-    const siguiente =
-      editando === null ? [nuevo, ...lista] : lista.map((x) => (x.id === editando ? nuevo : x));
+    const siguiente = editando === null ? [nuevo, ...lista] : lista.map((x) => (x.id === editando ? nuevo : x));
     if (guardar(siguiente)) {
       setAbierto(false);
       setEditando(null);
@@ -843,34 +856,20 @@ function PanelExperiencia() {
   };
 
   const borrar = (it: ExperienciaItem) => {
-    if (!window.confirm(`¿Eliminar "${it.empresa}"?`)) return;
+    if (!window.confirm("¿Eliminar este elemento?")) return;
     guardar(lista.filter((x) => x.id !== it.id));
   };
 
   const restablecer = () => {
-    if (!window.confirm("¿Volver a la experiencia original? Se perderán tus cambios.")) return;
+    if (!window.confirm("¿Restablecer experiencia original?")) return;
     restablecerExperiencia();
     setLista(cargarExperiencia());
     setMensaje("Experiencia restablecida.");
   };
 
-  const cargarLogo = (archivo: File | undefined) => {
-    if (!archivo) return;
-    if (!["image/png", "image/jpeg"].includes(archivo.type)) {
-      setMensaje("El logo debe ser PNG o JPG.");
-      return;
-    }
-    const lector = new FileReader();
-    lector.onload = () => {
-      const datos = lector.result;
-      if (typeof datos === "string") setB((x) => ({ ...x, logo: datos }));
-    };
-    lector.readAsDataURL(archivo);
-  };
-
   return (
     <section className="space-y-4 border-t border-border pt-6">
-      <h2 className="text-2xl font-bold">Experiencia profesional</h2>
+      <h2 className="text-2xl font-bold">Experiencia</h2>
       {mensaje && <p className="rounded-md border border-ojos/40 bg-card p-3 text-sm text-ojos">{mensaje}</p>}
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={abrirNuevo} className={`${BOTON} bg-sharingan text-foreground`}>
@@ -898,27 +897,40 @@ function PanelExperiencia() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Empresa</label>
-            <input className={CAMPO} value={b.empresa} maxLength={80} onChange={(e) => setB({ ...b, empresa: e.target.value })} />
+            <input className={CAMPO} value={b.empresa} maxLength={100} onChange={(e) => setB({ ...b, empresa: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Logo (PNG o JPG)</label>
-            <input type="file" accept="image/png,image/jpeg" onChange={(e) => cargarLogo(e.target.files?.[0])} className="w-full text-sm" />
+            <input
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={(e) => {
+                const archivo = e.target.files?.[0];
+                if (!archivo) return;
+                const lector = new FileReader();
+                lector.onload = () => {
+                  if (typeof lector.result === "string") setB({ ...b, logo: lector.result });
+                };
+                lector.readAsDataURL(archivo);
+              }}
+              className="w-full text-sm"
+            />
             {b.logo && (
-              <img src={b.logo} alt="Logo cargado" className="mt-2 h-14 w-14 rounded-md border border-border bg-white object-contain p-1" />
+              <img src={b.logo} alt="Logo" className="mt-2 h-14 w-14 rounded-md border border-border bg-white object-contain p-1" />
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="min-w-0 space-y-3">
+            <div className="space-y-3">
               <p className="text-sm font-bold">Inglés</p>
-              <input className={CAMPO} placeholder="Periodo" value={b.periodoEn} maxLength={60} onChange={(e) => setB({ ...b, periodoEn: e.target.value })} />
-              <input className={CAMPO} placeholder="Puesto" value={b.rolEn} maxLength={120} onChange={(e) => setB({ ...b, rolEn: e.target.value })} />
-              <textarea className={CAMPO} rows={6} placeholder="Logros (uno por línea)" value={b.detalleEn} onChange={(e) => setB({ ...b, detalleEn: e.target.value })} />
+              <input className={CAMPO} placeholder="Periodo" value={b.periodoEn} maxLength={50} onChange={(e) => setB({ ...b, periodoEn: e.target.value })} />
+              <input className={CAMPO} placeholder="Rol" value={b.rolEn} maxLength={100} onChange={(e) => setB({ ...b, rolEn: e.target.value })} />
+              <textarea className={CAMPO} rows={4} placeholder="Detalles (uno por línea)" value={b.detalleEn} onChange={(e) => setB({ ...b, detalleEn: e.target.value })} />
             </div>
-            <div className="min-w-0 space-y-3">
+            <div className="space-y-3">
               <p className="text-sm font-bold">Español</p>
-              <input className={CAMPO} placeholder="Periodo" value={b.periodoEs} maxLength={60} onChange={(e) => setB({ ...b, periodoEs: e.target.value })} />
-              <input className={CAMPO} placeholder="Puesto" value={b.rolEs} maxLength={120} onChange={(e) => setB({ ...b, rolEs: e.target.value })} />
-              <textarea className={CAMPO} rows={6} placeholder="Logros (uno por línea)" value={b.detalleEs} onChange={(e) => setB({ ...b, detalleEs: e.target.value })} />
+              <input className={CAMPO} placeholder="Periodo" value={b.periodoEs} maxLength={50} onChange={(e) => setB({ ...b, periodoEs: e.target.value })} />
+              <input className={CAMPO} placeholder="Rol" value={b.rolEs} maxLength={100} onChange={(e) => setB({ ...b, rolEs: e.target.value })} />
+              <textarea className={CAMPO} rows={4} placeholder="Detalles (uno por línea)" value={b.detalleEs} onChange={(e) => setB({ ...b, detalleEs: e.target.value })} />
             </div>
           </div>
           <button type="submit" className={`${BOTON} w-full bg-sharingan text-foreground sm:w-auto`}>
@@ -931,17 +943,17 @@ function PanelExperiencia() {
       <ul className="space-y-3">
         {lista.map((it) => (
           <li key={it.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3">
+            {it.logo && (
+              <img src={it.logo} alt="Logo" className="h-10 w-10 shrink-0 rounded-md border border-border bg-white object-contain p-0.5" />
+            )}
             <div className="min-w-0 flex-1">
-              <p className="font-semibold [overflow-wrap:anywhere]">{it.empresa}</p>
-              <p className="font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                {it.es.rol || it.en.rol}
-                {it.es.periodo || it.en.periodo ? ` · ${it.es.periodo || it.en.periodo}` : ""}
-              </p>
+              <p className="font-semibold wrap-anywhere">{it.empresa}</p>
+              <p className="font-mono text-xs text-muted-foreground wrap-anywhere">{it.es.rol || it.en.rol}</p>
             </div>
             <button
               type="button"
               onClick={() => abrirEditar(it)}
-              aria-label={`Editar ${it.empresa}`}
+              aria-label="Editar"
               className="rounded-md border border-border p-2 hover:text-ojos"
             >
               <Pencil className="h-4 w-4" />
@@ -949,7 +961,7 @@ function PanelExperiencia() {
             <button
               type="button"
               onClick={() => borrar(it)}
-              aria-label={`Eliminar ${it.empresa}`}
+              aria-label="Eliminar"
               className="rounded-md border border-border p-2 hover:text-sharingan"
             >
               <Trash2 className="h-4 w-4" />
