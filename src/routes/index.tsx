@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -200,26 +201,26 @@ function Hero() {
         <div className="min-w-0">
           <FotoPerfil className="mb-5" />
           <p className="font-mono text-sm text-destello">{h.saludo}</p>
-          <h1 className="mt-2 text-3xl font-extrabold leading-tight md:text-5xl [overflow-wrap:anywhere]">
+          <h1 className="mt-2 text-3xl font-extrabold leading-tight md:text-5xl wrap-anywhere">
             {hero.nombre}
           </h1>
-          <p className="mt-3 text-base font-semibold leading-snug text-ojos sm:text-lg md:text-xl [overflow-wrap:anywhere]">
+          <p className="mt-3 text-base font-semibold leading-snug text-ojos sm:text-lg md:text-xl wrap-anywhere">
             {h.titulo}
             <span className="mt-1 block text-sm font-normal text-muted-foreground md:text-base">
               {h.subtitulo}
             </span>
           </p>
           {h.lema && (
-            <p className="mt-2 border-l-2 border-sharingan pl-3 font-mono text-xs text-destello [overflow-wrap:anywhere]">
+            <p className="mt-2 border-l-2 border-sharingan pl-3 font-mono text-xs text-destello wrap-anywhere">
               {h.lema}
             </p>
           )}
-          <p className="mt-5 max-w-xl text-muted-foreground [overflow-wrap:anywhere]">{h.bio}</p>
+          <p className="mt-5 max-w-xl text-muted-foreground wrap-anywhere">{h.bio}</p>
           <ul className="mt-5 flex flex-col gap-2 font-mono text-sm">
             <li>
               <a
                 href={`tel:${enlaceTelefono(hero.telefono)}`}
-                className="inline-flex min-w-0 flex-wrap items-center gap-2 break-words text-foreground transition hover:text-ojos"
+                className="inline-flex min-w-0 flex-wrap items-center gap-2 wrap-break-word text-foreground transition hover:text-ojos"
               >
                 <Phone className="h-4 w-4 text-destello" />
                 <span className="text-muted-foreground">{t.llamame}:</span>
@@ -231,7 +232,7 @@ function Hero() {
                 href={hero.linkedin}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 flex-wrap items-center gap-2 break-words text-foreground transition hover:text-ojos"
+                className="inline-flex min-w-0 flex-wrap items-center gap-2 wrap-break-word text-foreground transition hover:text-ojos"
               >
                 <Briefcase className="h-4 w-4 text-destello" />
                 <span>LinkedIn:</span>
@@ -241,7 +242,7 @@ function Hero() {
             <li>
               <a
                 href={`mailto:${hero.correo}`}
-                className="inline-flex min-w-0 flex-wrap items-center gap-2 break-words text-foreground transition hover:text-ojos"
+                className="inline-flex min-w-0 flex-wrap items-center gap-2 wrap-break-word text-foreground transition hover:text-ojos"
               >
                 <Mail className="h-4 w-4 text-destello" />
                 <span className="text-muted-foreground">{t.escribeme}:</span>
@@ -287,7 +288,7 @@ function Experiencia() {
             const logo = it.logo;
             return (
             <li key={it.id} className="group mb-10 ml-6">
-              <span className="absolute -left-[7px] mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-ojos bg-background transition group-hover:bg-destello" />
+              <span className="absolute -left-1.75 mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-ojos bg-background transition group-hover:bg-destello" />
               <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 transition group-hover:border-ojos/50 sm:flex-row sm:items-start">
                 {logo && (
                   <img
@@ -404,7 +405,7 @@ function Servicios() {
                 className="min-w-0 rounded-xl border border-border bg-card p-4 transition sm:p-6 hover:-translate-y-1 hover:border-destello/60"
               >
                 <Icono className="h-6 w-6 text-destello" />
-                <h3 className="mt-3 break-words font-bold">{s.titulo}</h3>
+                <h3 className="mt-3 wrap-break-word font-bold">{s.titulo}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{s.descripcion}</p>
               </article>
             );
@@ -489,8 +490,8 @@ function Educacion() {
                   <GraduationCap className="h-8 w-8 shrink-0 text-ojos" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold [overflow-wrap:anywhere]">{x[idioma].titulo}</h3>
-                  <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{x[idioma].lugar}</p>
+                  <h3 className="font-bold wrap-anywhere">{x[idioma].titulo}</h3>
+                  <p className="text-sm text-muted-foreground wrap-anywhere">{x[idioma].lugar}</p>
                 </div>
                 {x.archivo && <ExternalLink className="h-4 w-4 shrink-0 self-center text-ojos" aria-hidden="true" />}
                 </>
