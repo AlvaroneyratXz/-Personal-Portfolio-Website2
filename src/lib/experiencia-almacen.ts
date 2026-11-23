@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+import { supabase } from "@/integrations/supabase/client";
 import {
   contenido,
   type Idioma,
@@ -140,6 +141,7 @@ export const EXPERIENCIA_BASE: ExperienciaItem[] = contenido.en.experiencia.map(
 });
 
 const CLAVE_EXPERIENCIA = "portafolio-experiencia";
+const TABLA_EXPERIENCIA = "experiencia_portafolio";
 
 export function textosDe(item: ExperienciaItem, idioma: Idioma): TextosExperiencia {
   return item[idioma];
@@ -157,13 +159,99 @@ export function cargarExperiencia(): ExperienciaItem[] {
   }
 }
 
-export function guardarExperiencia(lista: ExperienciaItem[]): boolean {
+export function guardarExperienciaLocal(lista: ExperienciaItem[]): boolean {
   try {
     window.localStorage.setItem(CLAVE_EXPERIENCIA, JSON.stringify(lista));
     return true;
   } catch {
     return false;
   }
+}
+
+export async function cargarExperienciaRemota(): Promise<ExperienciaItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from(TABLA_EXPERIENCIA as never)
+      .select("id, empresa, logo, en, es, orden")
+      .order("orden", { ascending: true });
+
+    if (error || !Array.isArray(data)) {
+      return cargarExperiencia();
+    }
+
+    if (data.length === 0) {
+      return EXPERIENCIA_BASE;
+    }
+
+    const mapeados: ExperienciaItem[] = (
+      data as {
+        id: string;
+        empresa: string;
+        logo: string | null;
+        en: TextosExperiencia;
+        es: TextosExperiencia;
+      }[]
+    ).map((row) => ({
+      id: row.id,
+      empresa: row.empresa,
+      logo: row.logo ?? "",
+      en: row.en,
+      es: row.es,
+    }));
+
+    guardarExperienciaLocal(mapeados);
+    return mapeados;
+  } catch {
+    return cargarExperiencia();
+  }
+}
+
+export async function guardarExperienciaRemota(lista: ExperienciaItem[]): Promise<boolean> {
+  guardarExperienciaLocal(lista);
+  try {
+    const filas = lista.map((item, idx) => ({
+      id: item.id,
+      orden: idx,
+      empresa: item.empresa,
+      logo: item.logo ?? "",
+      en: item.en,
+      es: item.es,
+      actualizado_en: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase
+      .from(TABLA_EXPERIENCIA as never)
+      .upsert(filas as never, { onConflict: "id" });
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function eliminarExperienciaRemota(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from(TABLA_EXPERIENCIA as never)
+      .delete()
+      .eq("id", id);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function restablecerExperienciaRemota(): Promise<ExperienciaItem[]> {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(CLAVE_EXPERIENCIA);
+  }
+  try {
+    await supabase.from(TABLA_EXPERIENCIA as never).delete().neq("id", "");
+    await guardarExperienciaRemota(EXPERIENCIA_BASE);
+  } catch {
+    // Si no hay conexión remota, devuelve EXPERIENCIA_BASE localmente
+  }
+  return EXPERIENCIA_BASE;
 }
 
 export type EducacionItem = {

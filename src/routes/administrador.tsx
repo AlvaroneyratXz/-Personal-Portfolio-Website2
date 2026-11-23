@@ -21,15 +21,17 @@ import {
 import {
   ANIOS_OPCIONES,
   cargarEducacion,
-  cargarExperiencia,
+  cargarExperienciaRemota,
+  eliminarExperienciaRemota,
   etiquetaTipoEmpleo,
   formatearPeriodoLinkedin,
   guardarEducacion,
-  guardarExperiencia,
+  guardarExperienciaLocal,
+  guardarExperienciaRemota,
   MESES_OPCIONES,
   MODALIDAD_OPCIONES,
   restablecerEducacion,
-  restablecerExperiencia,
+  restablecerExperienciaRemota,
   TIPO_EMPLEO_OPCIONES,
   type EducacionItem,
   type ExperienciaItem,
@@ -830,16 +832,17 @@ function PanelExperiencia() {
   const [mensaje, setMensaje] = useState("");
 
   useEffect(() => {
-    setLista(cargarExperiencia());
+    void cargarExperienciaRemota().then(setLista);
   }, []);
 
-  const guardar = (nueva: ExperienciaItem[]): boolean => {
-    if (!guardarExperiencia(nueva)) {
-      setMensaje("No se pudo guardar: el archivo es demasiado grande.");
-      return false;
-    }
+  const guardar = async (nueva: ExperienciaItem[]): Promise<boolean> => {
+    const ok = await guardarExperienciaRemota(nueva);
     setLista(nueva);
-    setMensaje("Experiencia guardada con éxito.");
+    setMensaje(
+      ok
+        ? "Experiencia guardada en Supabase y disponible en cualquier dispositivo."
+        : "Guardado localmente; revisa permisos o conexión con Supabase.",
+    );
     return true;
   };
 
@@ -918,7 +921,6 @@ function PanelExperiencia() {
     setAbierto(true);
   };
 
-  // Agrega el nuevo puesto / ascenso ARRIBA y hereda modalidad, ubicación y tipo de jornada del puesto anterior
   const agregarRol = () => {
     setB((prev) => {
       const referencia = prev.roles[0] ?? ROL_VACIO;
@@ -948,7 +950,7 @@ function PanelExperiencia() {
     }));
   };
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
     const empresa = b.empresa.trim();
     if (empresa.length < 2) {
@@ -1045,21 +1047,25 @@ function PanelExperiencia() {
     };
 
     const siguiente = editando === null ? [nuevo, ...lista] : lista.map((x) => (x.id === editando ? nuevo : x));
-    if (guardar(siguiente)) {
+    if (await guardar(siguiente)) {
       setAbierto(false);
       setEditando(null);
     }
   };
 
-  const borrar = (it: ExperienciaItem) => {
+  const borrar = async (it: ExperienciaItem) => {
     if (!window.confirm(`¿Eliminar "${it.empresa}"?`)) return;
-    guardar(lista.filter((x) => x.id !== it.id));
+    await eliminarExperienciaRemota(it.id);
+    const filtrada = lista.filter((x) => x.id !== it.id);
+    guardarExperienciaLocal(filtrada);
+    setLista(filtrada);
+    setMensaje("Experiencia eliminada.");
   };
 
-  const restablecer = () => {
+  const restablecer = async () => {
     if (!window.confirm("¿Restablecer experiencia original?")) return;
-    restablecerExperiencia();
-    setLista(cargarExperiencia());
+    const base = await restablecerExperienciaRemota();
+    setLista(base);
     setMensaje("Experiencia restablecida.");
   };
 
