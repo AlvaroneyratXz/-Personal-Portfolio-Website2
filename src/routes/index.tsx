@@ -279,40 +279,117 @@ function Experiencia() {
   useEffect(() => {
     setItems(cargarExperiencia());
   }, []);
+
+  const textoModalidad = (mod?: string) => {
+    if (!mod) return "";
+    if (idioma === "es") {
+      return mod === "hybrid" ? "Híbrido" : mod === "remote" ? "Remoto" : "Presencial";
+    }
+    return mod === "hybrid" ? "Hybrid" : mod === "remote" ? "Remote" : "On-site";
+  };
+
   return (
-    <section id="experience" className="relative scroll-mt-16 overflow-hidden border-t border-border py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+    <section
+      id="experience"
+      className="relative scroll-mt-16 overflow-hidden border-t border-border py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8"
+    >
       <FondoPersonaje tema="itachi" lado="right" />
       <div className="mx-auto max-w-4xl xl:max-w-5xl">
         <Titulo>{t.tituloExperiencia}</Titulo>
         <ol className="relative ml-2 sm:ml-3 border-l border-ojos/30">
           {items.map((it) => {
             const x = it[idioma];
-            const e = { empresa: it.empresa, periodo: x.periodo, rol: x.rol, detalle: x.detalle };
             const logo = it.logo;
+            const tieneRolesAnidados = Array.isArray(x.roles) && x.roles.length > 1;
+            const primerRol = x.roles?.[0];
+            const modalidadEmpresa = textoModalidad(primerRol?.modalidad);
+
             return (
-            <li key={it.id} className="group mb-10 ml-6">
-              <span className="absolute -left-1.75 mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-ojos bg-background transition group-hover:bg-destello" />
-              <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 sm:p-5 transition group-hover:border-ojos/50 sm:flex-row sm:items-start">
-                {logo && (
-                  <img
-                    src={logo}
-                    alt={`Logo ${e.empresa}`}
-                    loading="lazy"
-                    className="h-14 w-14 sm:h-16 sm:w-16 lg:h-20 lg:w-20 shrink-0 rounded-lg border border-border bg-white object-contain"
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-xs text-destello wrap-anywhere">{e.periodo}</p>
-                  <h3 className="mt-1 text-base sm:text-lg font-bold wrap-anywhere">{e.empresa}</h3>
-                  <p className="text-xs sm:text-sm font-semibold text-ojos wrap-anywhere">{e.rol}</p>
-                  <ul className="mt-3 list-disc space-y-2 pl-4 sm:pl-5 text-xs sm:text-sm text-muted-foreground marker:text-ojos">
-                    {e.detalle.map((d, n) => (
-                      <li key={`${n}-${d}`} className="wrap-anywhere">{d}</li>
-                    ))}
-                  </ul>
+              <li key={it.id} className="group mb-10 ml-6">
+                <span className="absolute -left-1.75 mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-ojos bg-background transition group-hover:bg-destello" />
+                <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 sm:p-5 transition group-hover:border-ojos/50 sm:flex-row sm:items-start">
+                  {logo && (
+                    <img
+                      src={logo}
+                      alt={`Logo ${it.empresa}`}
+                      loading="lazy"
+                      className="h-14 w-14 sm:h-16 sm:w-16 lg:h-20 lg:w-20 shrink-0 rounded-lg border border-border bg-white object-contain"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {tieneRolesAnidados && x.roles ? (
+                      <>
+                        <h3 className="text-base sm:text-lg font-bold wrap-anywhere">{it.empresa}</h3>
+                        <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                          {x.periodoTotal || x.periodo}
+                        </p>
+                        {modalidadEmpresa && (
+                          <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                            {modalidadEmpresa}
+                          </p>
+                        )}
+
+                        <div className="relative mt-4 ml-2 space-y-6 border-l border-ojos/25 pl-5">
+                          {x.roles.map((r, idx) => (
+                            <div key={`${idx}-${r.rol}`} className="relative">
+                              <span className="absolute -left-6.25 top-1.5 h-2.5 w-2.5 rounded-full border border-ojos bg-card" />
+                              <p className="text-sm sm:text-base font-bold text-ojos wrap-anywhere">
+                                {r.rol}
+                              </p>
+                              {r.tipo && (
+                                <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                                  {r.tipo}
+                                </p>
+                              )}
+                              <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                                {r.periodo}
+                              </p>
+                              {r.ubicacion && (
+                                <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                                  {r.ubicacion}
+                                </p>
+                              )}
+                              {r.detalle && r.detalle.length > 0 && (
+                                <ul className="mt-2.5 list-disc space-y-1.5 pl-4 sm:pl-5 text-xs sm:text-sm text-muted-foreground marker:text-ojos">
+                                  {r.detalle.map((d, n) => (
+                                    <li key={`${n}-${d}`} className="wrap-anywhere">
+                                      {d}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-base sm:text-lg font-bold wrap-anywhere">{it.empresa}</h3>
+                        <p className="text-xs sm:text-sm font-semibold text-ojos wrap-anywhere">{x.rol}</p>
+                        {primerRol?.tipo && (
+                          <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                            {primerRol.tipo}
+                          </p>
+                        )}
+                        <p className="font-mono text-xs text-destello wrap-anywhere">{x.periodo}</p>
+                        {primerRol?.ubicacion && (
+                          <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                            {primerRol.ubicacion}
+                            {modalidadEmpresa ? ` · ${modalidadEmpresa}` : ""}
+                          </p>
+                        )}
+                        <ul className="mt-3 list-disc space-y-2 pl-4 sm:pl-5 text-xs sm:text-sm text-muted-foreground marker:text-ojos">
+                          {x.detalle.map((d, n) => (
+                            <li key={`${n}-${d}`} className="wrap-anywhere">
+                              {d}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
+              </li>
             );
           })}
         </ol>
@@ -579,7 +656,7 @@ function Contacto() {
     if (nombreLimpio.length < 2) nuevos.nombre = t.form.errNombre;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoLimpio)) nuevos.correo = t.form.errCorreo;
     if (mensajeLimpio.length < 10) nuevos.mensaje = t.form.errMensaje;
-    
+
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0) {
       setEnviado(false);

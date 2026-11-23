@@ -19,14 +19,23 @@ import {
   type TextosHero,
 } from "../lib/hero-almacen";
 import {
+  ANIOS_OPCIONES,
   cargarEducacion,
   cargarExperiencia,
+  etiquetaTipoEmpleo,
+  formatearPeriodoLinkedin,
   guardarEducacion,
   guardarExperiencia,
+  MESES_OPCIONES,
+  MODALIDAD_OPCIONES,
   restablecerEducacion,
   restablecerExperiencia,
+  TIPO_EMPLEO_OPCIONES,
   type EducacionItem,
   type ExperienciaItem,
+  type RolExperiencia,
+  type TipoEmpleo,
+  type TipoUbicacion,
 } from "../lib/experiencia-almacen";
 
 export const Route = createFileRoute("/administrador")({
@@ -43,16 +52,14 @@ const CORREO_INTERNO = "administrador@portafolio-admin.com";
 const CLAVE_RECORDAR = "portafolio-admin-recordar";
 const CLAVE_TEMPORAL = "portafolio-admin-temporal";
 
-// Función segura validada con Supabase y control estricto de roles de base de datos
 async function esAdministrador(): Promise<boolean> {
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session?.user) return false;
 
-    // Validación segura de rol a nivel de servidor/base de datos usando RPC protegida
-    const { data: ok, error: rpcError } = await supabase.rpc("has_role", { 
-      _user_id: session.user.id, 
-      _role: "admin" 
+    const { data: ok, error: rpcError } = await supabase.rpc("has_role", {
+      _user_id: session.user.id,
+      _role: "admin",
     });
 
     if (rpcError || ok !== true) {
@@ -763,25 +770,56 @@ function PanelEducacion() {
   );
 }
 
+type BorradorRol = {
+  rolEn: string;
+  rolEs: string;
+  ubicacionEn: string;
+  ubicacionEs: string;
+  modalidad: TipoUbicacion;
+  tipoEmpleo: TipoEmpleo;
+  actual: boolean;
+  mesInicio: string;
+  anioInicio: string;
+  mesFin: string;
+  anioFin: string;
+  periodoFallbackEn: string;
+  periodoFallbackEs: string;
+  detalleEn: string;
+  detalleEs: string;
+};
+
 type BorradorExp = {
   empresa: string;
   logo: string;
-  periodoEn: string;
-  rolEn: string;
-  detalleEn: string;
-  periodoEs: string;
-  rolEs: string;
-  detalleEs: string;
+  periodoTotalEn: string;
+  periodoTotalEs: string;
+  roles: BorradorRol[];
 };
+
+const ROL_VACIO: BorradorRol = {
+  rolEn: "",
+  rolEs: "",
+  ubicacionEn: "",
+  ubicacionEs: "",
+  modalidad: "",
+  tipoEmpleo: "",
+  actual: false,
+  mesInicio: "11",
+  anioInicio: "2026",
+  mesFin: "",
+  anioFin: "",
+  periodoFallbackEn: "",
+  periodoFallbackEs: "",
+  detalleEn: "",
+  detalleEs: "",
+};
+
 const EXP_VACIA: BorradorExp = {
   empresa: "",
   logo: "",
-  periodoEn: "",
-  rolEn: "",
-  detalleEn: "",
-  periodoEs: "",
-  rolEs: "",
-  detalleEs: "",
+  periodoTotalEn: "",
+  periodoTotalEs: "",
+  roles: [{ ...ROL_VACIO }],
 };
 
 function PanelExperiencia() {
@@ -811,43 +849,201 @@ function PanelExperiencia() {
       .map((x) => x.trim())
       .filter((x) => x.length > 0);
 
+  const cargarLogoExp = (archivo: File | undefined) => {
+    if (!archivo) return;
+    if (!["image/png", "image/jpeg"].includes(archivo.type)) {
+      setMensaje("El logo debe ser PNG o JPG.");
+      return;
+    }
+    if (archivo.size > MAX_ARCHIVO) {
+      setMensaje("El archivo excede el límite de 2.5 MB.");
+      return;
+    }
+    const lector = new FileReader();
+    lector.onload = () => {
+      const datos = lector.result;
+      if (typeof datos === "string") setB((x) => ({ ...x, logo: datos }));
+    };
+    lector.readAsDataURL(archivo);
+  };
+
   const abrirNuevo = () => {
     setEditando(null);
-    setB(EXP_VACIA);
+    setB({ ...EXP_VACIA, roles: [{ ...ROL_VACIO }] });
     setAbierto(true);
   };
 
   const abrirEditar = (it: ExperienciaItem) => {
     setEditando(it.id);
+    const rolesEn =
+      it.en.roles && it.en.roles.length > 0
+        ? it.en.roles
+        : [{ rol: it.en.rol, tipo: "", periodo: it.en.periodo, detalle: it.en.detalle }];
+    const rolesEs =
+      it.es.roles && it.es.roles.length > 0
+        ? it.es.roles
+        : [{ rol: it.es.rol, tipo: "", periodo: it.es.periodo, detalle: it.es.detalle }];
+
+    const max = Math.max(rolesEn.length, rolesEs.length);
+    const rolesBorrador: BorradorRol[] = Array.from({ length: max }, (_, i) => {
+      const rEn = rolesEn[i];
+      const rEs = rolesEs[i];
+      const base = rEs ?? rEn;
+      return {
+        rolEn: rEn?.rol ?? "",
+        rolEs: rEs?.rol ?? "",
+        ubicacionEn: rEn?.ubicacion ?? "",
+        ubicacionEs: rEs?.ubicacion ?? "",
+        modalidad: (base?.modalidad ?? "") as TipoUbicacion,
+        tipoEmpleo: (base?.tipoEmpleo ?? "") as TipoEmpleo,
+        actual: Boolean(base?.actual),
+        mesInicio: base?.mesInicio ?? "",
+        anioInicio: base?.anioInicio ?? "",
+        mesFin: base?.mesFin ?? "",
+        anioFin: base?.anioFin ?? "",
+        periodoFallbackEn: rEn?.periodo ?? "",
+        periodoFallbackEs: rEs?.periodo ?? "",
+        detalleEn: (rEn?.detalle ?? []).join("\n"),
+        detalleEs: (rEs?.detalle ?? []).join("\n"),
+      };
+    });
+
     setB({
       empresa: it.empresa,
       logo: it.logo,
-      periodoEn: it.en.periodo,
-      rolEn: it.en.rol,
-      detalleEn: it.en.detalle.join("\n"),
-      periodoEs: it.es.periodo,
-      rolEs: it.es.rol,
-      detalleEs: it.es.detalle.join("\n"),
+      periodoTotalEn: it.en.periodoTotal ?? "",
+      periodoTotalEs: it.es.periodoTotal ?? "",
+      roles: rolesBorrador,
     });
     setAbierto(true);
+  };
+
+  // Agrega el nuevo puesto / ascenso ARRIBA y hereda modalidad, ubicación y tipo de jornada del puesto anterior
+  const agregarRol = () => {
+    setB((prev) => {
+      const referencia = prev.roles[0] ?? ROL_VACIO;
+      const nuevoAscenso: BorradorRol = {
+        ...ROL_VACIO,
+        ubicacionEn: referencia.ubicacionEn,
+        ubicacionEs: referencia.ubicacionEs,
+        modalidad: referencia.modalidad,
+        tipoEmpleo: referencia.tipoEmpleo,
+      };
+      return {
+        ...prev,
+        roles: [nuevoAscenso, ...prev.roles],
+      };
+    });
+  };
+
+  const quitarRol = (idx: number) => {
+    if (b.roles.length <= 1) return;
+    setB((prev) => ({ ...prev, roles: prev.roles.filter((_, i) => i !== idx) }));
+  };
+
+  const actualizarRol = <K extends keyof BorradorRol>(idx: number, campo: K, valor: BorradorRol[K]) => {
+    setB((prev) => ({
+      ...prev,
+      roles: prev.roles.map((r, i) => (i === idx ? { ...r, [campo]: valor } : r)),
+    }));
   };
 
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     const empresa = b.empresa.trim();
     if (empresa.length < 2) {
-      setMensaje("Escribe el nombre de la empresa.");
+      setMensaje("Escribe el nombre de la empresa / organización.");
       return;
     }
-    const en = { periodo: b.periodoEn.trim(), rol: b.rolEn.trim(), detalle: lineas(b.detalleEn) };
-    const es = { periodo: b.periodoEs.trim(), rol: b.rolEs.trim(), detalle: lineas(b.detalleEs) };
+
+    const rolesEn: RolExperiencia[] = b.roles.map((r) => {
+      const periodoCalc = formatearPeriodoLinkedin(
+        {
+          mesInicio: r.mesInicio,
+          anioInicio: r.anioInicio,
+          mesFin: r.mesFin,
+          anioFin: r.anioFin,
+          actual: r.actual,
+          periodoFallback: r.periodoFallbackEn || r.periodoFallbackEs,
+        },
+        "en",
+      );
+      const tipoLabel = etiquetaTipoEmpleo(r.tipoEmpleo, "en");
+      const obj: RolExperiencia = {
+        rol: r.rolEn.trim() || r.rolEs.trim(),
+        periodo: periodoCalc,
+        detalle: lineas(r.detalleEn).length ? lineas(r.detalleEn) : lineas(r.detalleEs),
+        ...(tipoLabel ? { tipo: tipoLabel } : {}),
+        ...(r.ubicacionEn.trim() || r.ubicacionEs.trim()
+          ? { ubicacion: r.ubicacionEn.trim() || r.ubicacionEs.trim() }
+          : {}),
+        ...(r.modalidad ? { modalidad: r.modalidad } : {}),
+        ...(r.tipoEmpleo ? { tipoEmpleo: r.tipoEmpleo } : {}),
+        actual: r.actual,
+        ...(r.mesInicio ? { mesInicio: r.mesInicio } : {}),
+        ...(r.anioInicio ? { anioInicio: r.anioInicio } : {}),
+        ...(!r.actual && r.mesFin ? { mesFin: r.mesFin } : {}),
+        ...(!r.actual && r.anioFin ? { anioFin: r.anioFin } : {}),
+      };
+      return obj;
+    });
+
+    const rolesEs: RolExperiencia[] = b.roles.map((r) => {
+      const periodoCalc = formatearPeriodoLinkedin(
+        {
+          mesInicio: r.mesInicio,
+          anioInicio: r.anioInicio,
+          mesFin: r.mesFin,
+          anioFin: r.anioFin,
+          actual: r.actual,
+          periodoFallback: r.periodoFallbackEs || r.periodoFallbackEn,
+        },
+        "es",
+      );
+      const tipoLabel = etiquetaTipoEmpleo(r.tipoEmpleo, "es");
+      const obj: RolExperiencia = {
+        rol: r.rolEs.trim() || r.rolEn.trim(),
+        periodo: periodoCalc,
+        detalle: lineas(r.detalleEs).length ? lineas(r.detalleEs) : lineas(r.detalleEn),
+        ...(tipoLabel ? { tipo: tipoLabel } : {}),
+        ...(r.ubicacionEs.trim() || r.ubicacionEn.trim()
+          ? { ubicacion: r.ubicacionEs.trim() || r.ubicacionEn.trim() }
+          : {}),
+        ...(r.modalidad ? { modalidad: r.modalidad } : {}),
+        ...(r.tipoEmpleo ? { tipoEmpleo: r.tipoEmpleo } : {}),
+        actual: r.actual,
+        ...(r.mesInicio ? { mesInicio: r.mesInicio } : {}),
+        ...(r.anioInicio ? { anioInicio: r.anioInicio } : {}),
+        ...(!r.actual && r.mesFin ? { mesFin: r.mesFin } : {}),
+        ...(!r.actual && r.anioFin ? { anioFin: r.anioFin } : {}),
+      };
+      return obj;
+    });
+
+    const primeroEn: RolExperiencia = rolesEn[0] ?? { rol: "", periodo: "", detalle: [] };
+    const primeroEs: RolExperiencia = rolesEs[0] ?? { rol: "", periodo: "", detalle: [] };
+    const tieneVarios = rolesEn.length > 1;
+
     const nuevo: ExperienciaItem = {
       id: editando ?? `exp-${Date.now()}`,
       empresa,
       logo: b.logo,
-      en: en.rol || en.periodo || en.detalle.length ? en : es,
-      es: es.rol || es.periodo || es.detalle.length ? es : en,
+      en: {
+        periodo: b.periodoTotalEn.trim() || primeroEn.periodo,
+        rol: primeroEn.rol,
+        detalle: primeroEn.detalle,
+        ...(b.periodoTotalEn.trim() ? { periodoTotal: b.periodoTotalEn.trim() } : {}),
+        ...(tieneVarios ? { roles: rolesEn } : {}),
+      },
+      es: {
+        periodo: b.periodoTotalEs.trim() || primeroEs.periodo,
+        rol: primeroEs.rol,
+        detalle: primeroEs.detalle,
+        ...(b.periodoTotalEs.trim() ? { periodoTotal: b.periodoTotalEs.trim() } : {}),
+        ...(tieneVarios ? { roles: rolesEs } : {}),
+      },
     };
+
     const siguiente = editando === null ? [nuevo, ...lista] : lista.map((x) => (x.id === editando ? nuevo : x));
     if (guardar(siguiente)) {
       setAbierto(false);
@@ -856,7 +1052,7 @@ function PanelExperiencia() {
   };
 
   const borrar = (it: ExperienciaItem) => {
-    if (!window.confirm("¿Eliminar este elemento?")) return;
+    if (!window.confirm(`¿Eliminar "${it.empresa}"?`)) return;
     guardar(lista.filter((x) => x.id !== it.id));
   };
 
@@ -885,7 +1081,9 @@ function PanelExperiencia() {
       {abierto && (
         <form onSubmit={enviar} noValidate className="min-w-0 space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold">{editando === null ? "Nueva experiencia" : "Editar experiencia"}</h3>
+            <h3 className="font-bold">
+              {editando === null ? "Add a role / Agregar experiencia" : "Editar experiencia"}
+            </h3>
             <button
               type="button"
               onClick={() => setAbierto(false)}
@@ -895,79 +1093,330 @@ function PanelExperiencia() {
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Empresa</label>
-            <input className={CAMPO} value={b.empresa} maxLength={100} onChange={(e) => setB({ ...b, empresa: e.target.value })} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Logo (PNG o JPG)</label>
-            <input
-              type="file"
-              accept="image/png,image/jpeg"
-              onChange={(e) => {
-                const archivo = e.target.files?.[0];
-                if (!archivo) return;
-                const lector = new FileReader();
-                lector.onload = () => {
-                  if (typeof lector.result === "string") setB({ ...b, logo: lector.result });
-                };
-                lector.readAsDataURL(archivo);
-              }}
-              className="w-full text-sm"
-            />
-            {b.logo && (
-              <img src={b.logo} alt="Logo" className="mt-2 h-14 w-14 rounded-md border border-border bg-white object-contain p-1" />
-            )}
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-3">
-              <p className="text-sm font-bold">Inglés</p>
-              <input className={CAMPO} placeholder="Periodo" value={b.periodoEn} maxLength={50} onChange={(e) => setB({ ...b, periodoEn: e.target.value })} />
-              <input className={CAMPO} placeholder="Rol" value={b.rolEn} maxLength={100} onChange={(e) => setB({ ...b, rolEn: e.target.value })} />
-              <textarea className={CAMPO} rows={4} placeholder="Detalles (uno por línea)" value={b.detalleEn} onChange={(e) => setB({ ...b, detalleEn: e.target.value })} />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Organization / Empresa *</label>
+              <input
+                className={CAMPO}
+                placeholder="Ej: AXUS ADVISORY GROUP"
+                value={b.empresa}
+                maxLength={120}
+                onChange={(e) => setB({ ...b, empresa: e.target.value })}
+              />
             </div>
-            <div className="space-y-3">
-              <p className="text-sm font-bold">Español</p>
-              <input className={CAMPO} placeholder="Periodo" value={b.periodoEs} maxLength={50} onChange={(e) => setB({ ...b, periodoEs: e.target.value })} />
-              <input className={CAMPO} placeholder="Rol" value={b.rolEs} maxLength={100} onChange={(e) => setB({ ...b, rolEs: e.target.value })} />
-              <textarea className={CAMPO} rows={4} placeholder="Detalles (uno por línea)" value={b.detalleEs} onChange={(e) => setB({ ...b, detalleEs: e.target.value })} />
+            <div>
+              <label className="mb-1 block text-sm font-medium">Logo (PNG o JPG)</label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={(e) => cargarLogoExp(e.target.files?.[0])}
+                className="w-full text-sm"
+              />
+              {b.logo && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img
+                    src={b.logo}
+                    alt="Logo"
+                    className="h-12 w-12 rounded-md border border-border bg-white object-contain p-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setB({ ...b, logo: "" })}
+                    className={`${BOTON} border border-border text-foreground`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Quitar logo
+                  </button>
+                </div>
+              )}
             </div>
           </div>
+
+          {b.roles.length > 1 && (
+            <div className="grid gap-4 rounded-lg border border-ojos/30 bg-secondary/40 p-3 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ojos">
+                  Duración total en empresa (Inglés - opcional)
+                </label>
+                <input
+                  className={CAMPO}
+                  placeholder="Ej: 2 yrs 6 mos"
+                  value={b.periodoTotalEn}
+                  onChange={(e) => setB({ ...b, periodoTotalEn: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ojos">
+                  Duración total en empresa (Español - opcional)
+                </label>
+                <input
+                  className={CAMPO}
+                  placeholder="Ej: 2 años 6 meses"
+                  value={b.periodoTotalEs}
+                  onChange={(e) => setB({ ...b, periodoTotalEs: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold">
+                Puestos / Roles ({b.roles.length}) {b.roles.length > 1 ? "— Línea de tiempo anidada" : ""}
+              </p>
+              <button type="button" onClick={agregarRol} className={`${BOTON} border border-ojos/50 text-ojos`}>
+                <Plus className="h-4 w-4" />
+                Agregar puesto / ascenso
+              </button>
+            </div>
+
+            {b.roles.map((r, idx) => (
+              <div key={idx} className="space-y-4 rounded-lg border border-border bg-background/60 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ojos">
+                    Puesto #{idx + 1} {idx === 0 ? "(Más reciente / Arriba)" : "(Anterior / Abajo)"}
+                  </span>
+                  {b.roles.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => quitarRol(idx)}
+                      className="inline-flex items-center gap-1 text-xs text-sharingan hover:underline"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Eliminar puesto
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Job title * (EN)</label>
+                    <input
+                      className={CAMPO}
+                      placeholder="Example: Senior Product Manager"
+                      value={r.rolEn}
+                      onChange={(e) => actualizarRol(idx, "rolEn", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Cargo / Puesto * (ES)</label>
+                    <input
+                      className={CAMPO}
+                      placeholder="Ej: Ingeniero Cyber-SOC Nivel 1"
+                      value={r.rolEs}
+                      onChange={(e) => actualizarRol(idx, "rolEs", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Location / Ubicación (ES)</label>
+                    <input
+                      className={CAMPO}
+                      placeholder="Ciudad o región (Ej: Lima, Perú)"
+                      value={r.ubicacionEs}
+                      onChange={(e) => actualizarRol(idx, "ubicacionEs", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Location (EN)</label>
+                    <input
+                      className={CAMPO}
+                      placeholder="City or region (Ej: Lima, Peru)"
+                      value={r.ubicacionEn}
+                      onChange={(e) => actualizarRol(idx, "ubicacionEn", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Location type / Modalidad</label>
+                    <select
+                      className={CAMPO}
+                      value={r.modalidad}
+                      onChange={(e) => actualizarRol(idx, "modalidad", e.target.value as TipoUbicacion)}
+                    >
+                      {MODALIDAD_OPCIONES.map((op) => (
+                        <option key={op.value || "empty"} value={op.value}>
+                          {op.es} ({op.en})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold">Employment type / Tipo de jornada</label>
+                  <select
+                    className={CAMPO}
+                    value={r.tipoEmpleo}
+                    onChange={(e) => actualizarRol(idx, "tipoEmpleo", e.target.value as TipoEmpleo)}
+                  >
+                    {TIPO_EMPLEO_OPCIONES.map((op) => (
+                      <option key={op.value || "empty"} value={op.value}>
+                        {op.es} ({op.en})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={r.actual}
+                    onChange={(e) => actualizarRol(idx, "actual", e.target.checked)}
+                    className="h-4 w-4 accent-ojos"
+                  />
+                  I currently work here / Trabajo aquí actualmente
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Start month / Mes de inicio</label>
+                    <select
+                      className={CAMPO}
+                      value={r.mesInicio}
+                      onChange={(e) => actualizarRol(idx, "mesInicio", e.target.value)}
+                    >
+                      {MESES_OPCIONES.map((m) => (
+                        <option key={m.value || "empty"} value={m.value}>
+                          {m.es} — {m.en}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">Start year * / Año de inicio</label>
+                    <select
+                      className={CAMPO}
+                      value={r.anioInicio}
+                      onChange={(e) => actualizarRol(idx, "anioInicio", e.target.value)}
+                    >
+                      <option value="">Año / Year</option>
+                      {ANIOS_OPCIONES.map((anio) => (
+                        <option key={anio} value={anio}>
+                          {anio}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {!r.actual && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold">End month / Mes de fin</label>
+                      <select
+                        className={CAMPO}
+                        value={r.mesFin}
+                        onChange={(e) => actualizarRol(idx, "mesFin", e.target.value)}
+                      >
+                        {MESES_OPCIONES.map((m) => (
+                          <option key={m.value || "empty"} value={m.value}>
+                            {m.es} — {m.en}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold">End year / Año de fin</label>
+                      <select
+                        className={CAMPO}
+                        value={r.anioFin}
+                        onChange={(e) => actualizarRol(idx, "anioFin", e.target.value)}
+                      >
+                        <option value="">Año / Year</option>
+                        {ANIOS_OPCIONES.map((anio) => (
+                          <option key={anio} value={anio}>
+                            {anio}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">
+                      Highlights (EN — one per line)
+                    </label>
+                    <textarea
+                      className={CAMPO}
+                      rows={4}
+                      placeholder="Projects, problems you solved, or results you achieved"
+                      value={r.detalleEn}
+                      onChange={(e) => actualizarRol(idx, "detalleEn", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold">
+                      Logros / Funciones (ES — uno por línea)
+                    </label>
+                    <textarea
+                      className={CAMPO}
+                      rows={4}
+                      placeholder="Proyectos, problemas resueltos o resultados logrados"
+                      value={r.detalleEs}
+                      onChange={(e) => actualizarRol(idx, "detalleEs", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <button type="submit" className={`${BOTON} w-full bg-sharingan text-foreground sm:w-auto`}>
             <Save className="h-4 w-4" />
-            Guardar
+            Save / Guardar
           </button>
         </form>
       )}
 
       <ul className="space-y-3">
-        {lista.map((it) => (
-          <li key={it.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3">
-            {it.logo && (
-              <img src={it.logo} alt="Logo" className="h-10 w-10 shrink-0 rounded-md border border-border bg-white object-contain p-0.5" />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold wrap-anywhere">{it.empresa}</p>
-              <p className="font-mono text-xs text-muted-foreground wrap-anywhere">{it.es.rol || it.en.rol}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => abrirEditar(it)}
-              aria-label="Editar"
-              className="rounded-md border border-border p-2 hover:text-ojos"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => borrar(it)}
-              aria-label="Eliminar"
-              className="rounded-md border border-border p-2 hover:text-sharingan"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </li>
-        ))}
+        {lista.map((it) => {
+          const cantRoles = it.es.roles?.length ?? 1;
+          return (
+            <li key={it.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3">
+              {it.logo && (
+                <img
+                  src={it.logo}
+                  alt="Logo"
+                  className="h-10 w-10 shrink-0 rounded-md border border-border bg-white object-contain p-0.5"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold wrap-anywhere">
+                  {it.empresa}
+                  {cantRoles > 1 && (
+                    <span className="ml-2 rounded bg-ojos/15 px-2 py-0.5 text-xs font-medium text-ojos">
+                      {cantRoles} puestos
+                    </span>
+                  )}
+                </p>
+                <p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+                  {it.es.rol || it.en.rol} · {it.es.periodoTotal || it.es.periodo || it.en.periodo}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => abrirEditar(it)}
+                aria-label="Editar"
+                className="rounded-md border border-border p-2 hover:text-ojos"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => borrar(it)}
+                aria-label="Eliminar"
+                className="rounded-md border border-border p-2 hover:text-sharingan"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

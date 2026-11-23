@@ -1,6 +1,100 @@
-import { contenido, type Idioma } from "./contenido";
+/* eslint-disable prettier/prettier */
+import {
+  contenido,
+  type Idioma,
+  type RolExperiencia,
+  type TipoEmpleo,
+  type TipoUbicacion,
+} from "./contenido";
 
-export type TextosExperiencia = { periodo: string; rol: string; detalle: string[] };
+export type { RolExperiencia, TipoEmpleo, TipoUbicacion };
+
+export const MESES_OPCIONES: { value: string; en: string; es: string }[] = [
+  { value: "", en: "Month", es: "Mes" },
+  { value: "01", en: "January", es: "Enero" },
+  { value: "02", en: "February", es: "Febrero" },
+  { value: "03", en: "March", es: "Marzo" },
+  { value: "04", en: "April", es: "Abril" },
+  { value: "05", en: "May", es: "Mayo" },
+  { value: "06", en: "June", es: "Junio" },
+  { value: "07", en: "July", es: "Julio" },
+  { value: "08", en: "August", es: "Agosto" },
+  { value: "09", en: "September", es: "Septiembre" },
+  { value: "10", en: "October", es: "Octubre" },
+  { value: "11", en: "November", es: "Noviembre" },
+  { value: "12", en: "December", es: "Diciembre" },
+];
+
+export const ANIOS_OPCIONES: string[] = Array.from({ length: 30 }, (_, i) => String(2028 - i));
+
+export const MODALIDAD_OPCIONES: { value: TipoUbicacion; en: string; es: string }[] = [
+  { value: "", en: "Please select", es: "Selecciona una opción" },
+  { value: "on-site", en: "On-site", es: "Presencial" },
+  { value: "hybrid", en: "Hybrid", es: "Híbrido" },
+  { value: "remote", en: "Remote", es: "Remoto" },
+];
+
+export const TIPO_EMPLEO_OPCIONES: { value: TipoEmpleo; en: string; es: string }[] = [
+  { value: "", en: "Please select", es: "Selecciona una opción" },
+  { value: "full-time", en: "Full-time", es: "Jornada completa" },
+  { value: "part-time", en: "Part-time", es: "Jornada parcial" },
+  { value: "self-employed", en: "Self-employed", es: "Autónomo" },
+  { value: "freelance", en: "Freelance", es: "Freelance" },
+  { value: "contract", en: "Contract", es: "Contrato" },
+  { value: "internship", en: "Internship", es: "Prácticas" },
+  { value: "apprenticeship", en: "Apprenticeship", es: "Aprendizaje" },
+];
+
+export function etiquetaModalidad(valor: TipoUbicacion | undefined, idioma: Idioma): string {
+  if (!valor) return "";
+  const encontrado = MODALIDAD_OPCIONES.find((o) => o.value === valor);
+  return encontrado ? encontrado[idioma] : "";
+}
+
+export function etiquetaTipoEmpleo(valor: TipoEmpleo | undefined, idioma: Idioma): string {
+  if (!valor) return "";
+  const encontrado = TIPO_EMPLEO_OPCIONES.find((o) => o.value === valor);
+  return encontrado ? encontrado[idioma] : "";
+}
+
+export function formatearFechaMesAnio(mes: string | undefined, anio: string | undefined, idioma: Idioma): string {
+  const a = (anio ?? "").trim();
+  const m = (mes ?? "").trim();
+  if (!a && !m) return "";
+  const mesObj = MESES_OPCIONES.find((x) => x.value === m && x.value !== "");
+  if (mesObj && a) return `${mesObj[idioma]} ${a}`;
+  if (mesObj) return mesObj[idioma];
+  return a;
+}
+
+export function formatearPeriodoLinkedin(
+  params: {
+    mesInicio?: string;
+    anioInicio?: string;
+    mesFin?: string;
+    anioFin?: string;
+    actual?: boolean;
+    periodoFallback?: string;
+  },
+  idioma: Idioma,
+): string {
+  const inicio = formatearFechaMesAnio(params.mesInicio, params.anioInicio, idioma);
+  if (!inicio) return params.periodoFallback ?? "";
+  const fin = params.actual
+    ? idioma === "es"
+      ? "Actualidad"
+      : "Present"
+    : formatearFechaMesAnio(params.mesFin, params.anioFin, idioma);
+  return fin ? `${inicio} – ${fin}` : inicio;
+}
+
+export type TextosExperiencia = {
+  periodo: string;
+  rol: string;
+  detalle: string[];
+  periodoTotal?: string;
+  roles?: RolExperiencia[];
+};
 
 export type ExperienciaItem = {
   id: string;
@@ -10,18 +104,38 @@ export type ExperienciaItem = {
   es: TextosExperiencia;
 };
 
-const LOGOS_BASE = ["/subida-1b5814c4.png", "/subida-eda350f3.png", "/subida-fa641c24.png", "/subida-5f3afc56.png"];
+const LOGOS_BASE = [
+  "/subida-1b5814c4.png",
+  "/subida-eda350f3.png",
+  "/subida-fa641c24.png",
+  "/subida-5f3afc56.png",
+];
 
 export const EXPERIENCIA_BASE: ExperienciaItem[] = contenido.en.experiencia.map((e, i) => {
   const es = contenido.es.experiencia[i];
+  const enObj: TextosExperiencia = {
+    periodo: e.periodo,
+    rol: e.rol,
+    detalle: e.detalle,
+    ...(e.periodoTotal ? { periodoTotal: e.periodoTotal } : {}),
+    ...(e.roles ? { roles: e.roles } : {}),
+  };
+  const esObj: TextosExperiencia = es
+    ? {
+        periodo: es.periodo,
+        rol: es.rol,
+        detalle: es.detalle,
+        ...(es.periodoTotal ? { periodoTotal: es.periodoTotal } : {}),
+        ...(es.roles ? { roles: es.roles } : {}),
+      }
+    : enObj;
+
   return {
     id: `base-${i}`,
     empresa: e.empresa,
     logo: LOGOS_BASE[i] ?? "",
-    en: { periodo: e.periodo, rol: e.rol, detalle: e.detalle },
-    es: es
-      ? { periodo: es.periodo, rol: es.rol, detalle: es.detalle }
-      : { periodo: e.periodo, rol: e.rol, detalle: e.detalle },
+    en: enObj,
+    es: esObj,
   };
 });
 
@@ -64,7 +178,13 @@ const LOGO_UPN = "/subida-3f987bff.png";
 const ARCHIVO_UPN = "/subida-18e99fc3.pdf";
 
 export const EDUCACION_BASE: EducacionItem[] = [
-  { id: "edu-base", logo: LOGO_UPN, archivo: ARCHIVO_UPN, en: contenido.en.educacion, es: contenido.es.educacion },
+  {
+    id: "edu-base",
+    logo: LOGO_UPN,
+    archivo: ARCHIVO_UPN,
+    en: contenido.en.educacion,
+    es: contenido.es.educacion,
+  },
 ];
 
 const CLAVE_EDUCACION = "portafolio-educacion";

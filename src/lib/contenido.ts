@@ -1,6 +1,41 @@
 /* eslint-disable prettier/prettier */
 export type Idioma = "en" | "es";
 
+export type TipoUbicacion = "" | "on-site" | "hybrid" | "remote";
+export type TipoEmpleo =
+  | ""
+  | "full-time"
+  | "part-time"
+  | "self-employed"
+  | "freelance"
+  | "contract"
+  | "internship"
+  | "apprenticeship";
+
+export interface RolExperiencia {
+  rol: string;
+  periodo: string;
+  tipo?: string;
+  detalle: string[];
+  ubicacion?: string;
+  modalidad?: TipoUbicacion;
+  tipoEmpleo?: TipoEmpleo;
+  actual?: boolean;
+  mesInicio?: string;
+  anioInicio?: string;
+  mesFin?: string;
+  anioFin?: string;
+}
+
+export interface ExperienciaItem {
+  empresa: string;
+  periodo: string;
+  rol: string;
+  detalle: string[];
+  periodoTotal?: string;
+  roles?: RolExperiencia[];
+}
+
 export interface Textos {
   nav: { about: string; experience: string; skills: string; projects: string; services: string; contact: string };
   servicios: {
@@ -25,7 +60,7 @@ export interface Textos {
   subContacto: string;
   titulo: string;
   proyectos: { nombre: string; descripcion: string; etiquetas: string[] }[];
-  experiencia: { empresa: string; periodo: string; rol: string; detalle: string[] }[];
+  experiencia: ExperienciaItem[];
   habilidades: { titulo: string; items: string[] }[];
   educacion: { titulo: string; lugar: string };
   certificaciones: string[];
@@ -137,12 +172,48 @@ export const contenido: Record<Idioma, Textos> = {
       },
       {
         empresa: "AXUS ADVISORY GROUP",
-        periodo: "July 2023 – July 2024",
-        rol: "SOC Analyst Level 1",
+        periodo: "January 2024 – June 2026",
+        periodoTotal: "2 yrs 6 mos · Hybrid",
+        rol: "Level 1 Cyber-SOC Engineer",
         detalle: [
           "Contained active endpoint security threats before propagation using AlienVault SIEM monitoring, Microsoft Defender, and Cisco AMP.",
-          "Analyzed real-time operating system logs and network anomalies to detect unauthorized access attempts and potential security breaches.",
-          "Performed proactive vulnerability assessments and penetration testing simulations using Kali Linux, Nmap, and Metasploit to harden system defenses.",
+        ],
+        roles: [
+          {
+            rol: "Level 1 Cyber-SOC Engineer",
+            tipo: "Full-time",
+            tipoEmpleo: "full-time",
+            modalidad: "hybrid",
+            ubicacion: "Lima, Peru",
+            mesInicio: "07",
+            anioInicio: "2024",
+            mesFin: "06",
+            anioFin: "2026",
+            actual: false,
+            periodo: "July 2024 – June 2026 · 2 yrs",
+            detalle: [
+              "Contained active endpoint security threats before propagation using AlienVault SIEM monitoring, Microsoft Defender, and Cisco AMP.",
+              "Analyzed real-time operating system logs and network anomalies to detect unauthorized access attempts and potential security breaches.",
+              "Performed proactive vulnerability assessments and penetration testing simulations using Kali Linux, Nmap, and Metasploit to harden system defenses.",
+            ],
+          },
+          {
+            rol: "SOC Analyst Level 1 Intern",
+            tipo: "Internship",
+            tipoEmpleo: "internship",
+            modalidad: "hybrid",
+            ubicacion: "Lima, Peru",
+            mesInicio: "01",
+            anioInicio: "2024",
+            mesFin: "11",
+            anioFin: "2024",
+            actual: false,
+            periodo: "January 2024 – November 2024 · 11 mos",
+            detalle: [
+              "Conducted proactive threat analysis and identified potential vulnerabilities across corporate infrastructure.",
+              "Implemented security controls and hardening measures to strengthen the organization's security posture.",
+            ],
+          },
         ],
       },
     ],
@@ -295,12 +366,48 @@ export const contenido: Record<Idioma, Textos> = {
       },
       {
         empresa: "AXUS ADVISORY GROUP",
-        periodo: "Julio 2023 – Julio 2024",
-        rol: "Analista SOC Nivel 1",
+        periodo: "Enero 2024 – Junio 2026",
+        periodoTotal: "2 años 6 meses · Híbrido",
+        rol: "Ingeniero Cyber-SOC Nivel 1",
         detalle: [
           "Contuve amenazas activas en equipos antes de que se propagaran, usando monitoreo con AlienVault SIEM, Microsoft Defender y Cisco AMP.",
-          "Analicé en tiempo real los registros de sistemas operativos y las anomalías de red para detectar intentos de acceso no autorizado y posibles brechas de seguridad.",
-          "Realicé evaluaciones de vulnerabilidades y simulaciones de pruebas de penetración con Kali Linux, Nmap y Metasploit para reforzar las defensas de los sistemas.",
+        ],
+        roles: [
+          {
+            rol: "Ingeniero Cyber-SOC Nivel 1",
+            tipo: "Tiempo completo",
+            tipoEmpleo: "full-time",
+            modalidad: "hybrid",
+            ubicacion: "Lima, Perú",
+            mesInicio: "07",
+            anioInicio: "2024",
+            mesFin: "06",
+            anioFin: "2026",
+            actual: false,
+            periodo: "Julio 2024 – Junio 2026 · 2 años",
+            detalle: [
+              "Contuve amenazas activas en equipos antes de que se propagaran, usando monitoreo con AlienVault SIEM, Microsoft Defender y Cisco AMP.",
+              "Analicé en tiempo real los registros de sistemas operativos y las anomalías de red para detectar intentos de acceso no autorizado y posibles brechas de seguridad.",
+              "Realicé evaluaciones de vulnerabilidades y simulaciones de pruebas de penetración con Kali Linux, Nmap y Metasploit para reforzar las defensas de los sistemas.",
+            ],
+          },
+          {
+            rol: "Practicante de Ingeniero SOC Nivel 1",
+            tipo: "Prácticas",
+            tipoEmpleo: "internship",
+            modalidad: "hybrid",
+            ubicacion: "Lima, Perú",
+            mesInicio: "01",
+            anioInicio: "2024",
+            mesFin: "11",
+            anioFin: "2024",
+            actual: false,
+            periodo: "Enero 2024 – Noviembre 2024 · 11 meses",
+            detalle: [
+              "Contribuí al análisis proactivo de amenazas, identificando vulnerabilidades potenciales en la infraestructura corporativa.",
+              "Apliqué soluciones y controles de seguridad para fortalecer la postura de defensa de la organización.",
+            ],
+          },
         ],
       },
     ],
