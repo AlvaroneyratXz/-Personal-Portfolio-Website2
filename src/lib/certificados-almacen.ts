@@ -1,3 +1,6 @@
+/* eslint-disable prettier/prettier */
+import { supabase } from "@/integrations/supabase/client";
+
 export type Certificado = {
   nombre: string;
   emisor: string;
@@ -67,6 +70,7 @@ export const CERTIFICADOS_BASE: Certificado[] = [
 ];
 
 const CLAVE_CERTIFICADOS = "portafolio-certificados";
+const TABLA_CERTIFICADOS = "certificados_portafolio";
 
 export function ordenarCertificados(lista: Certificado[]): Certificado[] {
   return [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, "en"));
@@ -94,5 +98,91 @@ export function guardarCertificados(lista: Certificado[]): boolean {
 }
 
 export function restablecerCertificados(): void {
-  window.localStorage.removeItem(CLAVE_CERTIFICADOS);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(CLAVE_CERTIFICADOS);
+  }
+}
+
+export async function cargarCertificadosRemotos(): Promise<Certificado[]> {
+  try {
+    const { data, error } = await supabase
+      .from(TABLA_CERTIFICADOS as never)
+      .select("nombre, emisor, vigencia, imagen, logo");
+
+    if (error || !Array.isArray(data)) {
+      return ordenarCertificados(cargarCertificados());
+    }
+
+    if (data.length === 0) {
+      return ordenarCertificados(CERTIFICADOS_BASE);
+    }
+
+    const mapeados: Certificado[] = (
+      data as {
+        nombre: string;
+        emisor: string | null;
+        vigencia: string | null;
+        imagen: string | null;
+        logo: string | null;
+      }[]
+    ).map((row) => ({
+      nombre: row.nombre,
+      emisor: row.emisor ?? "",
+      imagen: row.imagen ?? "",
+      logo: row.logo ?? "",
+      ...(row.vigencia ? { vigencia: row.vigencia } : {}),
+    }));
+
+    const ordenada = ordenarCertificados(mapeados);
+    guardarCertificados(ordenada);
+    return ordenada;
+  } catch {
+    return ordenarCertificados(cargarCertificados());
+  }
+}
+
+export async function guardarCertificadosRemotos(lista: Certificado[]): Promise<boolean> {
+  const ordenada = ordenarCertificados(lista);
+  guardarCertificados(ordenada);
+  try {
+    const filas = ordenada.map((c) => ({
+      nombre: c.nombre,
+      emisor: c.emisor,
+      vigencia: c.vigencia ?? null,
+      imagen: c.imagen,
+      logo: c.logo,
+      actualizado_en: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase
+      .from(TABLA_CERTIFICADOS as never)
+      .upsert(filas as never, { onConflict: "nombre" });
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function eliminarCertificadoRemoto(nombre: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from(TABLA_CERTIFICADOS as never)
+      .delete()
+      .eq("nombre", nombre);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function restablecerCertificadosRemotos(): Promise<Certificado[]> {
+  restablecerCertificados();
+  try {
+    await supabase.from(TABLA_CERTIFICADOS as never).delete().neq("nombre", "");
+    await guardarCertificadosRemotos(CERTIFICADOS_BASE);
+  } catch {
+    // Respaldo local si no hay conexión
+  }
+  return ordenarCertificados(CERTIFICADOS_BASE);
 }

@@ -4,10 +4,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Eye, EyeOff, LogOut, Pencil, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import {
-  cargarCertificados,
+  cargarCertificadosRemotos,
+  eliminarCertificadoRemoto,
   guardarCertificados,
+  guardarCertificadosRemotos,
   ordenarCertificados,
-  restablecerCertificados,
+  restablecerCertificadosRemotos,
   type Certificado,
 } from "../lib/certificados-almacen";
 import {
@@ -224,17 +226,19 @@ function Panel({ alSalir }: { alSalir: () => void }) {
   const [mensaje, setMensaje] = useState("");
 
   useEffect(() => {
-    setLista(ordenarCertificados(cargarCertificados()));
+    void cargarCertificadosRemotos().then(setLista);
   }, []);
 
-  const guardar = (nueva: Certificado[]): boolean => {
+  const guardar = async (nueva: Certificado[]): Promise<boolean> => {
     const ordenada = ordenarCertificados(nueva);
-    if (!guardarCertificados(ordenada)) {
-      setMensaje("No se pudo guardar: el archivo es demasiado grande.");
-      return false;
-    }
+    guardarCertificados(ordenada);
+    const ok = await guardarCertificadosRemotos(ordenada);
     setLista(ordenada);
-    setMensaje("Cambios guardados de forma segura.");
+    setMensaje(
+      ok
+        ? "Certificados guardados en Supabase y visibles en cualquier dispositivo."
+        : "Guardado localmente; revisa permisos o conexión con Supabase.",
+    );
     return true;
   };
 
@@ -261,7 +265,7 @@ function Panel({ alSalir }: { alSalir: () => void }) {
     setFormAbierto(true);
   };
 
-  const guardarForm = (e: FormEvent) => {
+  const guardarForm = async (e: FormEvent) => {
     e.preventDefault();
     const nombre = borrador.nombre.trim();
     if (nombre.length < 3) {
@@ -276,18 +280,22 @@ function Panel({ alSalir }: { alSalir: () => void }) {
     };
     if (borrador.vigencia.trim()) nuevo.vigencia = borrador.vigencia.trim();
     const sinEste = editando === null ? lista : lista.filter((c) => c.nombre !== editando);
-    if (guardar([...sinEste, nuevo])) cerrarForm();
+    if (await guardar([...sinEste, nuevo])) cerrarForm();
   };
 
-  const borrar = (nombre: string) => {
+  const borrar = async (nombre: string) => {
     if (!window.confirm(`¿Eliminar "${nombre}"?`)) return;
-    guardar(lista.filter((c) => c.nombre !== nombre));
+    await eliminarCertificadoRemoto(nombre);
+    const filtrada = ordenarCertificados(lista.filter((c) => c.nombre !== nombre));
+    guardarCertificados(filtrada);
+    setLista(filtrada);
+    setMensaje("Certificado eliminado.");
   };
 
-  const restablecer = () => {
+  const restablecer = async () => {
     if (!window.confirm("¿Volver a los certificados originales?")) return;
-    restablecerCertificados();
-    setLista(ordenarCertificados(cargarCertificados()));
+    const base = await restablecerCertificadosRemotos();
+    setLista(base);
     setMensaje("Certificados restablecidos.");
   };
 

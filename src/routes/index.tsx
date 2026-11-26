@@ -22,6 +22,7 @@ import { TarjetaCertificado } from "../components/TarjetaCertificado";
 import {
   CERTIFICADOS_BASE,
   cargarCertificados,
+  cargarCertificadosRemotos,
   ordenarCertificados,
   type Certificado,
 } from "../lib/certificados-almacen";
@@ -35,6 +36,7 @@ import { EfectosCursor } from "../components/EfectosCursor";
 import {
   cargarEducacion,
   cargarExperiencia,
+  cargarExperienciaRemota,
   EDUCACION_BASE,
   EXPERIENCIA_BASE,
   type EducacionItem,
@@ -278,6 +280,7 @@ function Experiencia() {
   const [items, setItems] = useState<ExperienciaItem[]>(EXPERIENCIA_BASE);
   useEffect(() => {
     setItems(cargarExperiencia());
+    void cargarExperienciaRemota().then(setItems);
   }, []);
 
   const textoModalidad = (mod?: string) => {
@@ -551,6 +554,7 @@ function Educacion() {
   const [estudios, setEstudios] = useState<EducacionItem[]>(EDUCACION_BASE);
   useEffect(() => {
     setLista(ordenarCertificados(cargarCertificados()));
+    void cargarCertificadosRemotos().then(setLista);
     setEstudios(cargarEducacion());
   }, []);
   return (
